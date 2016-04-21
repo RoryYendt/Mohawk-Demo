@@ -5,7 +5,6 @@
 	<title>Mohawk Demo</title>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
 	<style>
-	
 		table.pure-table {
 			font-size: 13px;
 			color: #333333;
@@ -43,7 +42,7 @@
 			margin-bottom:1%;
 		}
 		label{
-			width: 150px;
+			width: 160px;
 			display:inline-block;
 			text-align: left;
 		}
@@ -53,6 +52,12 @@
 			height: 100%;
 			width: 80%;
 			background-color:#dddfd4;
+		}
+		button{
+			margin-bottom: 1%;
+		}
+		button.submit{
+			margin-top: 1%;
 		}
 	</style>
 	</head>
@@ -70,10 +75,10 @@
 		<div><label>Address*: </label><input type="text" placeholder="Address(Street, City)" name ="address" onblur="validateField(this.name)">
 		<span class="error">A Valid Address Is Required</div>
 		
-		<div><label>Health Card Number*: </label><input type="number" min="0" max="9999999999" placeholder="Ontario Health Card Number"name="cardNumber" onblur="validateField(this.name)">
+		<div><label>Health Card Number*: </label><input type="number" min="0" max="9999999999" placeholder="Ontario Health Card Number"name="cardNumber" onblur="validateHealthCard(this.name)">
 		<span class="error">A Valid Health Card Number Is Required</div>
 		
-		<div><label>Date Of Birth*: </label><input type="date" placeholder="Date Of Birth" min="1900-01-01" max="2100-01-01" name ="dateOfBirth" onblur="inDateRange(this), validateField(this.name)">
+		<div><label>Date Of Birth*: </label><input type="date" placeholder="Date Of Birth" min="1900-01-01" max="currentDate()" name ="dateOfBirth" onblur="inDateRange(this), validateField(this.name)">
 		<span class="error">A Valid Date Of Birth Is Required</div>
 		
 		<div>
@@ -83,16 +88,16 @@
 		</select>
 		<span class="error">A Valid Gender Is Required</div>
 		
-		<div><label>Notes: </label><input type="text" placeholder="Notes" name ="notes"></div><br>
+		<div><label>Notes: </label><input type="text" placeholder="Notes" name ="notes"></div>
 		*Required Fields<br>
-		<button id="submitButton" type="button">Submit</button><br><br>
+		<button class = "submit" id="submitButton" type="button">Submit</button>
 	</form>
 	<div>
-		<button id="retrieveButton" type="button">Retieve All Patients</button><br><br>
+		<button id="retrieveButton" type="button">Retieve All Patients</button>
 		<form id="searchParams">
-			<input type="text" placeholder = "Ontario Health Card Number" name="cardNumber"><br>
+			<input type="number" min="0" max="9999999999" placeholder = "Ontario Health Card Number" name="cardNumber">
 		</form>
-		<button id="retrieveWithNumber" type="button">Search With Health Card Number</button><br><br>
+		<button id="retrieveWithNumber" type="button">Search With Health Card Number</button>
 		<table class = "pure-table" border="1" style = "width:100%" id="patientTable">
 			<tr>
 				<th>First Name</th>
@@ -106,67 +111,78 @@
 		</table>
 	</div>
 	<script>
-	$(document).ready(function(){   
-			$('#submitButton').click(function() {
-			if(validateFields()){
+	$(document).ready(function(){   //When the document is ready grab all patients to display
+		getAllPatients();
+			$('#retrieveButton').click(function() {//Retrieve all button response
+				getAllPatients();
+			});
+			$('#submitButton').click(function() {//Submit button response
+				if(validateFields()){
+					$.ajax({
+					dataType: 'json',
+					data: $('#userParams').serialize(),
+					type: 'POST',
+					url: '/app/patient',
+					success: document.getElementById('userParams').reset(),
+					});
+				}
+			});
+			
+			$('#retrieveWithNumber').click(function() {//Search for single patient
+				$("#patientTable").find("tr:not(:first)").remove()
 				$.ajax({
 				dataType: 'json',
-				data: $('#userParams').serialize(),
-				type: 'POST',
+				data: $('#searchParams').serialize(),
+				type: 'GET',
 				url: '/app/patient',
-				success: document.getElementById('userParams').reset(),
+				success: function(data){
+					redrawTable([data]);
+				},
+				});
 			});
-			}
-	});
-
-});
-	
-	$(document).ready(function(){   
-   
-			$('#retrieveWithNumber').click(function() {
-			$("#patientTable").find("tr:not(:first)").remove()
-			$.ajax({
-			dataType: 'json',
-			data: $('#searchParams').serialize(),
-			type: 'GET',
-			url: '/app/patient',
-			success: function(data){
-				redrawTable([data]);
-			},
 		});
-	});
-
-});
-
-	$(document).ready(function(){   
-   
-			$('#retrieveButton').click(function() {
+	function getAllPatients(){
 			$.ajax({
 			dataType: 'json',
-			data: $('#userParams').serialize(),
+			data: $('#userParams').serialize(),//Turns the form data into JSON data
 			type: 'GET',
 			url: '/app/patients',
 			success: function(data){
 				redrawTable(data);
 			},
 		});
-	});
+	}
+	function currentDate(){//Gets current date to ensure the latest date is the current for a born individual
+		var today = new Date();
+		var dd = today.getDate();
+		var mm = today.getMonth()+1;
+		var yyyy = today.getFullYear();
 
-});
+		if(dd<10) {
+			dd='0'+dd
+		} 
+
+		if(mm<10) {
+			mm='0'+mm
+		} 
+		today = yyyy+"-"+mm+"-"+dd;
+		return today;
+	}
+	
+	
 	function inDateRange(dateInput){
-		console.log(dateInput.value);
 		var date = (dateInput.value).toString();
 		var remainder = date.substring(4);
-		console.log(date);
 		if(parseInt(date.substring(0,4))<1900){
 			dateInput.value = "1900"+remainder;
 		}
-		else if(parseInt(date.substring(0,4))>2100){
-			dateInput.value = "2100" + remainder;
+		today = currentDate().toString();
+		if(parseInt(date.substring(0,4))>parseInt(today.substring(0,4))){
+			dateInput.value = currentDate();
 		}
 	}
 	
-	function redrawTable(data){
+	function redrawTable(data){//Redraw the table when a new get command is sent
 		$("#patientTable").find("tr:not(:first)").remove();
 		var tr;
 		for (var key = 0; key<data.length; key++){
@@ -182,7 +198,8 @@
 			$('#patientTable').append(tr);
 	}
 }
-	function validateField(name){
+	function validateField(name){//For validating single field for onblur
+			valid = null;
 			var field = $("#userParams input[name="+name+"]");
 			if(field.val() == ""){
 				field.next().attr('class', 'error_show');
@@ -190,15 +207,12 @@
 			}
 			else{
 				field.next().attr('class', 'error');
-		}
+			}
+			return valid;
 	}
-	function validateFields(){
-		var valid = true;
-		var fields = ["firstName","lastName","address","dateOfBirth", "cardNumber"];
-		for(var i = 0; i<4; i++){
-			validateField(fields[i]);
-		}
-		var field = $("#userParams input[name="+fields[4]+"]");
+	function validateHealthCard(name){
+		valid = null;
+		var field = $("#userParams input[name="+name+"]");
 		if(field.val().length == 10){
 			var cardValue = field.val();
 			var afterDouble = 0;
@@ -211,7 +225,6 @@
 					afterDouble+=parseInt(cardValue[i]);
 				}
 			}
-			console.log(afterDouble);
 			if((10-afterDouble%10)%10 == parseInt(cardValue[9]))
 			{
 				field.next().attr('class', 'error')
@@ -224,6 +237,19 @@
 		else{
 			valid = false;
 			field.next().attr('class', 'error_show');
+		}
+		return(valid);
+	}
+	function validateFields(){//On submit make sure all fields are valid
+		var valid = true;
+		var fields = ["firstName","lastName","address","dateOfBirth", "cardNumber"];
+		for(var i = 0; i<4; i++){
+			if(!validateField(fields[i])){
+				valid = false;
+			}
+		}
+		if(!validateHealthCard(fields[4])){
+			valid = false;
 		}
 		return(valid);
 	
