@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Mohawk Demo</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+	<style>
+	
+		table.pure-table {
+			font-size: 13px;
+			color: #333333;
+			border-width: 1px;
+			border-color: #000000;
+			border-collapse: collapse;
+		}
+		table.pure-table th {
+			padding: 8px;
+			border-style: solid;
+			border-color: #000000;
+			background-color: #173e43;
+			color: #ffffff;
+		}
+		table.pure-table tr:nth-child(even) td{
+			background-color: #8B9EA1;
+		}
+		table.pure-table td {
+			padding: 8px;
+			border-style: solid;
+			border-color: #000000;
+			background-color: #ffffff;
+		}
+		.error{
+			display: none;
+			margin-left: 10px;
+		}		
+		.error_show{
+			color: red;
+			margin-left: 10px;
+		}
+		input,select{
+			width: 200px;
+			display: inline;
+			margin-bottom:1%;
+		}
+		label{
+			width: 150px;
+			display:inline-block;
+			text-align: left;
+		}
+		body{
+			margin:0 auto;
+			margin-top: 5%;
+			height: 100%;
+			width: 80%;
+			background-color:#dddfd4;
+		}
+	</style>
+	</head>
+<body>
+	<form id="userParams" onsubmit= "submitUser()">
+		<h1>Mohawk Health Care Demo</h1>
+		<div><label>First Name*: </label><input type="text" placeholder="First Name" name="firstName" onblur="validateField(this.name)">
+		<span class="error">A Valid First Name Is Required</div>
+		
+		<div><label>Middle Name: </label><input type="text" placeholder="Middle Name" name ="middleName"></div>
+		
+		<div><label>Last Name*: </label><input type="text" placeholder="Last Name" name="lastName" onblur="validateField(this.name)">
+		<span class="error">A Valid Last Name Is Required</div>
+		
+		<div><label>Address*: </label><input type="text" placeholder="Address(Street, City)" name ="address" onblur="validateField(this.name)">
+		<span class="error">A Valid Address Is Required</div>
+		
+		<div><label>Health Card Number*: </label><input type="number" min="0" max="9999999999" placeholder="Ontario Health Card Number"name="cardNumber" onblur="validateField(this.name)">
+		<span class="error">A Valid Health Card Number Is Required</div>
+		
+		<div><label>Date Of Birth*: </label><input type="date" placeholder="Date Of Birth" min="1900-01-01" max="2100-01-01" name ="dateOfBirth" onblur="inDateRange(this), validateField(this.name)">
+		<span class="error">A Valid Date Of Birth Is Required</div>
+		
+		<div>
+		<label>Gender*: </label><select name="gender">
+			<option value="Female">Female</option>
+			<option value="Male">Male</option>
+		</select>
+		<span class="error">A Valid Gender Is Required</div>
+		
+		<div><label>Notes: </label><input type="text" placeholder="Notes" name ="notes"></div><br>
+		*Required Fields<br>
+		<button id="submitButton" type="button">Submit</button><br><br>
+	</form>
+	<div>
+		<button id="retrieveButton" type="button">Retieve All Patients</button><br><br>
+		<form id="searchParams">
+			<input type="text" placeholder = "Ontario Health Card Number" name="cardNumber"><br>
+		</form>
+		<button id="retrieveWithNumber" type="button">Search With Health Card Number</button><br><br>
+		<table class = "pure-table" border="1" style = "width:100%" id="patientTable">
+			<tr>
+				<th>First Name</th>
+				<th>Middle Name</th>
+				<th>Last Name</th>
+				<th>Address Name</th>
+				<th>Health Card Number</th>
+				<th>Date Of Birth</th>
+				<th>Gender</th>
+				<th>Notes</th>
+		</table>
+	</div>
+	<script>
+	$(document).ready(function(){   
+			$('#submitButton').click(function() {
+			if(validateFields()){
+				$.ajax({
+				dataType: 'json',
+				data: $('#userParams').serialize(),
+				type: 'POST',
+				url: '/app/patient',
+				success: document.getElementById('userParams').reset(),
+			});
+			}
+	});
+
+});
+	
+	$(document).ready(function(){   
+   
+			$('#retrieveWithNumber').click(function() {
+			$("#patientTable").find("tr:not(:first)").remove()
+			$.ajax({
+			dataType: 'json',
+			data: $('#searchParams').serialize(),
+			type: 'GET',
+			url: '/app/patient',
+			success: function(data){
+				redrawTable([data]);
+			},
+		});
+	});
+
+});
+
+	$(document).ready(function(){   
+   
+			$('#retrieveButton').click(function() {
+			$.ajax({
+			dataType: 'json',
+			data: $('#userParams').serialize(),
+			type: 'GET',
+			url: '/app/patients',
+			success: function(data){
+				redrawTable(data);
+			},
+		});
+	});
+
+});
+	function inDateRange(dateInput){
+		console.log(dateInput.value);
+		var date = (dateInput.value).toString();
+		var remainder = date.substring(4);
+		console.log(date);
+		if(parseInt(date.substring(0,4))<1900){
+			dateInput.value = "1900"+remainder;
+		}
+		else if(parseInt(date.substring(0,4))>2100){
+			dateInput.value = "2100" + remainder;
+		}
+	}
+	
+	function redrawTable(data){
+		$("#patientTable").find("tr:not(:first)").remove();
+		var tr;
+		for (var key = 0; key<data.length; key++){
+			tr = $('<tr/>');
+			tr.append('<td>' + data[key].firstName + '</td>');
+			tr.append('<td>' + data[key].middleName + '</td>');
+			tr.append('<td>' + data[key].lastName + '</td>');
+			tr.append('<td>' + data[key].address + '</td>');
+			tr.append('<td>' + data[key].cardNumber + '</td>');
+			tr.append('<td>' + data[key].dateOfBirth + '</td>');
+			tr.append('<td>' + data[key].gender + '</td>');
+			tr.append('<td>' + data[key].notes + '</td>');
+			$('#patientTable').append(tr);
+	}
+}
+	function validateField(name){
+			var field = $("#userParams input[name="+name+"]");
+			if(field.val() == ""){
+				field.next().attr('class', 'error_show');
+				valid = false;
+			}
+			else{
+				field.next().attr('class', 'error');
+		}
+	}
+	function validateFields(){
+		var valid = true;
+		var fields = ["firstName","lastName","address","dateOfBirth", "cardNumber"];
+		for(var i = 0; i<4; i++){
+			validateField(fields[i]);
+		}
+		var field = $("#userParams input[name="+fields[4]+"]");
+		if(field.val().length == 10){
+			var cardValue = field.val();
+			var afterDouble = 0;
+			for(i = 0; i<9;i++){
+				if(i%2===0){
+					var doubled = cardValue[i]*2;
+					afterDouble+=(Math.floor(doubled/10) + doubled-(10*Math.floor(doubled/10)));
+				}
+				else{
+					afterDouble+=parseInt(cardValue[i]);
+				}
+			}
+			console.log(afterDouble);
+			if((10-afterDouble%10)%10 == parseInt(cardValue[9]))
+			{
+				field.next().attr('class', 'error')
+			}
+			else{
+				valid = false;
+				field.next().attr('class', 'error_show');
+			}
+		}
+		else{
+			valid = false;
+			field.next().attr('class', 'error_show');
+		}
+		return(valid);
+	
+	}
+	</script>
+</body>
+</html>
